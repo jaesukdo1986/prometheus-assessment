@@ -1,0 +1,21 @@
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /logs/app.log
+  fields:
+    app: interview-prometheus
+  fields_under_root: true
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "app-logs-%{+yyyy.MM.dd}"
+
+
+setup:
+  template:
+    name: "app-logs"
+    pattern: "app-logs-*"
+
+logging.level: info
+logging.to_files: false
