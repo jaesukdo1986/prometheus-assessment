@@ -1,0 +1,40 @@
+global:
+  resolve_timeout: 4m
+route:
+  receiver: 'discord-warning'
+  group_by: [namespace]
+  routes:
+    - match:
+        severity: warning
+      receiver: discord-warning
+    - match_re:
+        severity: ^(oncall|critical)$
+      receiver: discord-critical
+inhibit_rules:
+  - source_matchers:
+      - 'severity = critical'
+    target_matchers:
+      - 'severity =~ warning|info'
+    equal:
+      - 'namespace'
+      - 'alertname'
+  - source_matchers:
+      - 'severity = warning'
+    target_matchers:
+      - 'severity = info'
+    equal:
+      - 'namespace'
+      - 'alertname'
+  - source_matchers:
+      - 'alertname = InfoInhibitor'
+    target_matchers:
+      - 'severity = info'
+    equal:
+      - 'namespace'
+receivers:
+- name: discord-critical
+  discord_configs:
+    - webhook_url: https://discord.com/api/webhooks/xxx
+- name: discord-warning
+  discord_configs:
+    - webhook_url: https://discord.com/api/webhooks/xxx
