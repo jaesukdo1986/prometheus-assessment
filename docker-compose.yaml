@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Application Server (Log Generator)
+  app-server:
+    build: 
+      context: ./app-server
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  # Log Shipper (Filebeat)
+  log-shipper:
+    image: docker.elastic.co/beats/filebeat:7.14.0
+    volumes:
+      - ./logs:/logs
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+    depends_on:
+      - elasticsearch
+      - app-server
+    restart: unless-stopped
+
+  # Elasticsearch (Log Management System)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+    # Kibana (Visualization Platform)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.14.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+  # Prometheus (Monitoring System)
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-alert.yml:/etc/prometheus/alerts.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+  # Alert Manager for Discord Notifications
+  alertmanager:
+    image: prom/alertmanager
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+
+  # Log Exporter
+  log-exporter:
+    build: 
+      context: ./log-exporter
+      dockerfile: Dockerfile
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_INDEX=filebeat-*
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+volumes:
+  es-data:
