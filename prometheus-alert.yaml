@@ -1,0 +1,11 @@
+groups:
+  - name: elasticsearch.rules
+    rules:
+      - alert: ElasticsearchNoApplicationLogs
+        expr: elasticsearch_document_count - elasticsearch_document_count offset 5m <= 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No application logs detected"
+          description: "The application logs are not being received."
